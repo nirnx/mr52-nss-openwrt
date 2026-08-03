@@ -1,0 +1,45 @@
+The interface MAC comes from an nvmem cell in the i2c EEPROM (MR52). The
+at24 module probes seconds after nss-gmac, so of_get_mac_address() returns
+-EPROBE_DEFER — which the driver ignored, then read an uninitialised stack
+struct as the MAC address. Propagate EPROBE_DEFER like dwmac does and zero
+the pdata so no error path can produce garbage MACs.
+
+--- a/ipq806x/nss_gmac_ctrl.c
++++ b/ipq806x/nss_gmac_ctrl.c
+@@ -1009,6 +1009,14 @@
+ {
+ 	struct nss_gmac_dev *gmacdev = (struct nss_gmac_dev *)netdev_priv(netdev);
+ 	struct resource memres_devtree = {0};
++	int32_t ret;
++
++	/*
++	 * Zero the pdata so a failed/absent property can never leave stack
++	 * garbage behind (a stale byte pattern here used to become the
++	 * interface MAC address).
++	 */
++	memset(gmaccfg, 0, sizeof(*gmaccfg));
+ 
+ 	if (of_property_read_u32(np, "qcom,id", &gmacdev->macid)
+ 		|| of_property_read_u32(np, "qcom,phy-mdio-addr",
+@@ -1042,10 +1050,19 @@
+ 	}
+ 
+ #if (LINUX_VERSION_CODE > KERNEL_VERSION(6, 1, 0))
+-	of_get_mac_address(np, (uint8_t *)gmaccfg->mac_addr);
++	ret = of_get_mac_address(np, (uint8_t *)gmaccfg->mac_addr);
+ #else
+-	of_get_mac_address(np, gmaccfg->mac_addr);
++	ret = of_get_mac_address(np, gmaccfg->mac_addr);
+ #endif
++	/*
++	 * The MAC lives in an nvmem cell (i2c EEPROM on MR52). If the nvmem
++	 * provider has not probed yet, defer this probe and let the kernel
++	 * retry after it appears — exactly what stmmac/dwmac does. Any other
++	 * error leaves the field zeroed and the driver falls back to a
++	 * proper random MAC.
++	 */
++	if (ret == -EPROBE_DEFER)
++		return -EPROBE_DEFER;
+ 
+ 	if (of_address_to_resource(np, 0, &memres_devtree) != 0)
+ 		return -EFAULT;

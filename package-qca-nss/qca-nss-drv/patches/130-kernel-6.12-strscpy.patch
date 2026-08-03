@@ -1,0 +1,31 @@
+strlcpy was removed in kernel 6.8; strscpy is a drop-in here.
+
+--- a/nss_stats.c
++++ b/nss_stats.c
+@@ -243,7 +243,7 @@
+ 		size_wr += scnprintf(lbuf + size_wr, size_al - size_wr, "<");
+ 	}
+ 
+-	strlcpy(node_upr, node, NSS_STATS_NODE_NAME_MAX);
++	strscpy(node_upr, node, NSS_STATS_NODE_NAME_MAX);
+ 	for (i = 0; node_upr[i] != '\0' && i < NSS_STATS_NODE_NAME_MAX; i++) {
+ 		node_upr[i] = toupper(node_upr[i]);
+ 	}
+@@ -308,7 +308,7 @@
+ 			continue;
+ 		}
+ 
+-		strlcpy(stats_string, stats_info[i].stats_name, NSS_STATS_MAX_STR_LENGTH);
++		strscpy(stats_string, stats_info[i].stats_name, NSS_STATS_MAX_STR_LENGTH);
+ 
+ 		/*
+ 		 * Converting  uppercase to lower case.
+@@ -317,7 +317,7 @@
+ 			stats_string[j] = tolower(stats_string[j]);
+ 		}
+ 
+-		strlcpy(node_lwr, node, NSS_STATS_NODE_NAME_MAX);
++		strscpy(node_lwr, node, NSS_STATS_NODE_NAME_MAX);
+ 		for (j = 0; node_lwr[j] != '\0' && j < NSS_STATS_NODE_NAME_MAX; j++) {
+ 			node_lwr[j] = tolower(node_lwr[j]);
+ 		}

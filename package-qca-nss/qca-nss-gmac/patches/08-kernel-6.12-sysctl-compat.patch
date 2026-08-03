@@ -1,0 +1,79 @@
+Kernel 6.12 compat: const ctl_table proc handlers, guarded sysctl sentinel, void platform remove callback.
+
+--- a/ipq806x/include/nss_gmac_dev.h	2026-08-02 22:10:22.744186006 +0000
++++ b/ipq806x/include/nss_gmac_dev.h	2026-08-02 22:16:05.472306012 +0000
+@@ -2146,11 +2146,11 @@
+ void nss_gmac_disable_mmc_ipc_rx_interrupt(struct nss_gmac_dev *gmacdev,
+ 					   uint32_t mask);
+ /* Sysctl handler APIs */
+-int nss_gmac_per_prec_stats_enable_handler(struct ctl_table *table, int write,
+-					   void __user *buffer, size_t *lenp,
++int nss_gmac_per_prec_stats_enable_handler(const struct ctl_table *table, int write,
++					   void *buffer, size_t *lenp,
+ 					   loff_t *ppos);
+-int nss_gmac_per_prec_stats_reset_handler(struct ctl_table *table, int write,
+-					   void __user *buffer, size_t *lenp,
++int nss_gmac_per_prec_stats_reset_handler(const struct ctl_table *table, int write,
++					   void *buffer, size_t *lenp,
+ 					   loff_t *ppos);
+ 
+ #endif /* End of file */
+--- a/ipq806x/nss_gmac_ctrl.c	2026-08-02 22:10:22.744186006 +0000
++++ b/ipq806x/nss_gmac_ctrl.c	2026-08-02 22:17:51.434767006 +0000
+@@ -159,7 +159,9 @@
+ 		.mode           = 0644,
+ 		.proc_handler   = nss_gmac_per_prec_stats_reset_handler
+ 	},
++#if (LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0))
+ 	{}
++#endif
+ };
+ 
+ /**
+@@ -1574,6 +1576,14 @@
+  * @param[in] pointer to struct platform_device
+  * @return Returns 0 on success and Error code on failure.
+  */
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 0))
++static void nss_gmac_remove(struct platform_device *pdev)
++{
++	/*
++	 * All remove has been done in nss_gmac_exit_network_interfaces
++	 */
++}
++#else
+ static int nss_gmac_remove(struct platform_device *pdev)
+ {
+ 	/*
+@@ -1582,6 +1592,7 @@
+ 	 */
+ 	return 0;
+ }
++#endif
+ 
+ static struct of_device_id nss_gmac_dt_ids[] = {
+ 	{ .compatible =  "qcom,nss-gmac" },
+--- a/ipq806x/nss_gmac_sysctl.c	2026-08-02 22:10:22.744186006 +0000
++++ b/ipq806x/nss_gmac_sysctl.c	2026-08-02 22:16:05.472306012 +0000
+@@ -26,8 +26,8 @@
+ /* nss_gmac_per_prec_stats_enable_handler()
+  *	Enable/Disable per-precedence statistics
+  */
+-int nss_gmac_per_prec_stats_enable_handler(struct ctl_table *table, int write,
+-					   void __user *buffer, size_t *lenp,
++int nss_gmac_per_prec_stats_enable_handler(const struct ctl_table *table, int write,
++					   void *buffer, size_t *lenp,
+ 					   loff_t *ppos)
+ {
+ 	int ret;
+@@ -58,8 +58,8 @@
+ /* nss_gmac_per_prec_stats_reset_handler()
+  *	Reset per-precedence statistics
+  */
+-int nss_gmac_per_prec_stats_reset_handler(struct ctl_table *table, int write,
+-				   void __user *buffer, size_t *lenp,
++int nss_gmac_per_prec_stats_reset_handler(const struct ctl_table *table, int write,
++				   void *buffer, size_t *lenp,
+ 				   loff_t *ppos)
+ {
+ 	int ret, i;

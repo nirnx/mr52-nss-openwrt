@@ -1,0 +1,28 @@
+SET_NETDEV_DEV must point at the GMAC platform device, not the MDIO bus
+parent. The slowpath datapath DMA-maps against netdev->dev.parent; on
+boards where the PHYs sit on a bitbanged mdio-gpio bus that parent has no
+dma_mask, dma_map_page_attrs() fails (WARN at kernel/dma/mapping.c) and
+the GMAC DMA engine is given an invalid address — the SoC hard-resets on
+the first frames. Same fix as the 23.05-era MR52 patch 0110; the old code
+even carried a "(netdev, &pdev->dev) ?" comment suspecting this.
+
+--- a/ipq806x/nss_gmac_ctrl.c
++++ b/ipq806x/nss_gmac_ctrl.c
+@@ -1432,8 +1432,15 @@
+ 		}
+ 	}
+ 
+-	/* workaround for tplink,onhub eth0 phy_attach_direct panic with poll enabled */
+-	SET_NETDEV_DEV(netdev, gmacdev->miibus->parent); /* (netdev, &pdev->dev) ? */
++	/*
++	 * Bind the netdev to the GMAC platform device, not the MDIO bus
++	 * parent: phy_attach_direct() needs a non-NULL parent, and the
++	 * slowpath DMA maps pages against this device — the mdio bus parent
++	 * (bitbanged mdio-gpio on MR52) has no dma_mask, so mappings fail
++	 * and the GMAC DMA engine gets fed an invalid address, hard-resetting
++	 * the SoC on first traffic.
++	 */
++	SET_NETDEV_DEV(netdev, &pdev->dev);
+ 
+ 	/*
+ 	 * Connect PHY

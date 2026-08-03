@@ -1,0 +1,17 @@
+strlcpy was removed in kernel 6.8; strscpy is a drop-in here.
+
+--- a/ipq806x/nss_gmac_ethtool.c
++++ b/ipq806x/nss_gmac_ethtool.c
+@@ -256,9 +256,9 @@
+ static void nss_gmac_get_drvinfo(struct net_device *dev,
+ 						struct ethtool_drvinfo *info)
+ {
+-	strlcpy(info->driver, nss_gmac_driver_string, sizeof(info->driver));
+-	strlcpy(info->version, nss_gmac_driver_version, sizeof(info->version));
+-	strlcpy(info->bus_info, "NSS", ETHTOOL_BUSINFO_LEN);
++	strscpy(info->driver, nss_gmac_driver_string, sizeof(info->driver));
++	strscpy(info->version, nss_gmac_driver_version, sizeof(info->version));
++	strscpy(info->bus_info, "NSS", ETHTOOL_BUSINFO_LEN);
+ 	info->n_priv_flags = __NSS_GMAC_PRIV_FLAG_MAX;
+ }
+ 
